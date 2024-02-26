@@ -1,12 +1,27 @@
-use axum::{
-    routing::get,
-    Router,
+use std::{
+    io::{prelude::*, BufReader},
+    net::{TcpListener, TcpStream},
 };
 
+fn main() {
+    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
-#[tokio::main]
-async fn main (){
-    let app = Router::new().route("/", get(|| async {"Hello world"}));
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    for stream in listener.incoming() {
+        let stream = stream.unwrap();
+
+        handle_connection(stream);
+    }
+}
+
+fn handle_connection(mut stream: TcpStream) {
+    let buf_reader = BufReader::new(&mut stream);
+    let http_request: Vec<_> = buf_reader
+        .lines()
+        .map(|result| result.unwrap())
+        .take_while(|line| !line.is_empty())
+        .collect();
+
+    let response = "HTTP/1.1 200 OK\r\n\r\n";
+
+    stream.write_all(response.as_bytes()).unwrap();
 }
